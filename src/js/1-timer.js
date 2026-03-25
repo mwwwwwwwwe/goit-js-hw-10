@@ -9,10 +9,7 @@ const daysValue = document.querySelector('[data-days]');
 const hoursValue = document.querySelector('[data-hours]');
 const minutesValue = document.querySelector('[data-minutes]');
 const secondsValue = document.querySelector('[data-seconds]');
-
 let userSelectedDate = null;
-let timerId = null;
-
 sbmBtn.disabled = true;
 
 const options = {
@@ -21,11 +18,8 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    const selectedDate = selectedDates[0];
-    const timeLeft = selectedDate - Date.now();
-
+    const timeLeft = selectedDates[0] - Date.now();
     if (timeLeft <= 0) {
-      userSelectedDate = null;
       sbmBtn.disabled = true;
       iziToast.show({
         message: 'Please choose a date in the future',
@@ -33,20 +27,19 @@ const options = {
         position: 'topRight',
       });
     } else {
-      userSelectedDate = selectedDate;
+      userSelectedDate = selectedDates[0];
       sbmBtn.disabled = false;
     }
   },
 };
-
 flatpickr(input, options);
 
 function convertMs(ms) {
+
   const second = 1000;
   const minute = second * 60;
   const hour = minute * 60;
   const day = hour * 24;
-
   const days = Math.floor(ms / day);
   const hours = Math.floor((ms % day) / hour);
   const minutes = Math.floor(((ms % day) % hour) / minute);
@@ -59,35 +52,42 @@ function addLeadingZero(value) {
   return String(value).padStart(2, '0');
 }
 
-function updateTimerDisplay({ days, hours, minutes, seconds }) {
-  daysValue.textContent = addLeadingZero(days);
-  hoursValue.textContent = addLeadingZero(hours);
-  minutesValue.textContent = addLeadingZero(minutes);
-  secondsValue.textContent = addLeadingZero(seconds);
+function updateTimerDisplay(value) {
+  daysValue.textContent = addLeadingZero(value.days);
+  hoursValue.textContent = addLeadingZero(value.hours);
+  minutesValue.textContent = addLeadingZero(value.minutes);
+  secondsValue.textContent = addLeadingZero(value.seconds);
+}
+
+function resetTimerDisplay() {
+  daysValue.textContent = addLeadingZero(0);
+  hoursValue.textContent = addLeadingZero(0);
+  minutesValue.textContent = addLeadingZero(0);
+  secondsValue.textContent = addLeadingZero(0);
 }
 
 sbmBtn.addEventListener('click', () => {
-  if (timerId !== null) return;
-
-  input.disabled = true;
-  sbmBtn.disabled = true;
-
-  const timeLeft = userSelectedDate - Date.now();
-  updateTimerDisplay(convertMs(timeLeft));
-
-  timerId = setInterval(() => {
-    const remainingTime = userSelectedDate - Date.now();
-
-    if (remainingTime <= 0) {
-      clearInterval(timerId);
-      timerId = null;
-
-      updateTimerDisplay({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-
+  const intervalId = setInterval(() => {
+    const timeLeft = userSelectedDate - Date.now();
+    const result = convertMs(timeLeft);
+    if (timeLeft <= 0) {
+      resetTimerDisplay();
+      clearInterval(intervalId);
       input.disabled = false;
+      iziToast.show({
+        message: 'The timer finished',
+        color: 'yellow',
+        position: 'topRight',
+      });
       return;
     }
-
-    updateTimerDisplay(convertMs(remainingTime));
+    updateTimerDisplay(result);
   }, 1000);
+  input.disabled = true;
+  sbmBtn.disabled = true;
+  iziToast.show({
+    message: 'The timer activated',
+    color: 'green',
+    position: 'topRight',
+  });
 });
