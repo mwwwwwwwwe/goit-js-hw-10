@@ -1,20 +1,20 @@
-
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
-const timerBtn = document.querySelector('.btn-start');
 
-const daysLable = document.querySelector('.value[data-days]');
-const hoursLable = document.querySelector('.value[data-hours]');
-const minutesLable = document.querySelector('.value[data-minutes]');
-const secondsLable = document.querySelector('.value[data-seconds]');
+const dateInput = document.querySelector('#datetime-picker');
+const timerBtn = document.querySelector('[data-start]');
+
+const daysLable = document.querySelector('[data-days]');
+const hoursLable = document.querySelector('[data-hours]');
+const minutesLable = document.querySelector('[data-minutes]');
+const secondsLable = document.querySelector('[data-seconds]');
 
 let selectedDate = null;
-let nowDate = null;
-
-let calculatedTime = convertMs(selectedDate - nowDate);
 let interval = null;
+
+timerBtn.disabled = true;
 
 const options = {
   enableTime: true,
@@ -23,26 +23,26 @@ const options = {
   minuteIncrement: 1,
   onClose(selectedDates) {
     clearInterval(interval);
-    nowDate = Date.now();
+    const nowDate = Date.now();
     selectedDate = selectedDates[0].getTime();
-    if (selectedDate < nowDate) {
+
+    if (selectedDate <= nowDate) {
       iziToast.show({
-        backgroundColor: 'red',
-        title: 'Please choose a date in the future',
+        message: 'Please choose a date in the future',
+        color: 'red',
         position: 'topRight',
       });
       timerBtn.disabled = true;
+      selectedDate = null;
     } else {
       timerBtn.disabled = false;
-
     }
   },
 };
 
-flatpickr('input#datetime-picker', options);
+flatpickr(dateInput, options);
 
 function convertMs(ms) {
-
   const second = 1000;
   const minute = second * 60;
   const hour = minute * 60;
@@ -56,29 +56,42 @@ function convertMs(ms) {
   return { days, hours, minutes, seconds };
 }
 
-timerBtn.addEventListener('click', e => {
-  clearInterval(interval);
-  e.target.disabled = true;
-  calculatedTime = convertMs(selectedDate - nowDate);
-  daysLable.textContent = addLeadingZero(`${calculatedTime.days}`);
-  hoursLable.textContent = addLeadingZero(`${calculatedTime.hours}`);
-  minutesLable.textContent = addLeadingZero(`${calculatedTime.minutes}`);
-  secondsLable.textContent = addLeadingZero(`${calculatedTime.seconds}`);
-  interval = setInterval(() => {
-    nowDate = new Date();
-    if (nowDate < selectedDate) {
-      calculatedTime = convertMs(selectedDate - nowDate);
+function addLeadingZero(value) {
+  return String(value).padStart(2, '0');
+}
 
-      daysLable.textContent = addLeadingZero(`${calculatedTime.days}`);
-      hoursLable.textContent = addLeadingZero(`${calculatedTime.hours}`);
-      minutesLable.textContent = addLeadingZero(`${calculatedTime.minutes}`);
-      secondsLable.textContent = addLeadingZero(`${calculatedTime.seconds}`);
+function updateTimerDisplay({ days, hours, minutes, seconds }) {
+  daysLable.textContent = addLeadingZero(days);
+  hoursLable.textContent = addLeadingZero(hours);
+  minutesLable.textContent = addLeadingZero(minutes);
+  secondsLable.textContent = addLeadingZero(seconds);
+}
+
+timerBtn.addEventListener('click', () => {
+  if (!selectedDate) return;
+
+  clearInterval(interval);
+
+  timerBtn.disabled = true;
+  dateInput.disabled = true;
+
+  const startTime = Date.now();
+  const timeLeft = selectedDate - startTime;
+
+  updateTimerDisplay(convertMs(timeLeft));
+
+  interval = setInterval(() => {
+    const nowDate = Date.now();
+    const remainingTime = selectedDate - nowDate;
+
+    if (remainingTime > 0) {
+      const calculatedTime = convertMs(remainingTime);
+      updateTimerDisplay(calculatedTime);
     } else {
+
       clearInterval(interval);
+      updateTimerDisplay({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      dateInput.disabled = false;
     }
   }, 1000);
 });
-
-function addLeadingZero(value) {
-  return `${value}`.padStart(2, [0]);
-}
